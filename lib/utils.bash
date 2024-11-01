@@ -143,9 +143,16 @@ get_package_versions() {
     { [ "${pip_version_major}" -eq 20 ] && [ "${pip_version_minor}" -ge 3 ]; }; then
     pip_install_args+=("--use-deprecated=legacy-resolver")
   fi
-  version_output_raw=$("${ASDF_PYAPP_RESOLVED_PYTHON_PATH}" -m pip install ${pip_install_args[@]+"${pip_install_args[@]}"} "${package}==" 2>&1) || true
 
-  local regex='.*from versions:(.*)\)'
+  local regex
+  if [ "${pip_version_major}" -ge 24 ] && [ "${pip_version_minor}" -ge 1 ]; then
+    version_output_raw=$("${ASDF_PYAPP_RESOLVED_PYTHON_PATH}" -m pip index versions ${pip_install_args[@]+"${pip_install_args[@]}"} "${package}" 2>&1) || true
+    regex='.*Available versions:(.*)'
+  else
+    version_output_raw=$("${ASDF_PYAPP_RESOLVED_PYTHON_PATH}" -m pip install ${pip_install_args[@]+"${pip_install_args[@]}"} "${package}==" 2>&1) || true
+    regex='.*from versions:(.*)\)'
+  fi
+
   if [[ $version_output_raw =~ $regex ]]; then
     local version_substring="${BASH_REMATCH[1]//','/}"
     # trim whitespace with 'xargs echo' and convert spaces to newlines with 'tr'
